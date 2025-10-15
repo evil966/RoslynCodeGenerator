@@ -1,1 +1,1 @@
-﻿SELECT * FROM SalesReport;
+﻿SELECT * FROM SalesReport WHERE 1=1;

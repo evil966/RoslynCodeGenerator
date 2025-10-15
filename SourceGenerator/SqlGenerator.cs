@@ -14,14 +14,12 @@ namespace SourceGenerator
     {
         public void Initialize(IncrementalGeneratorInitializationContext context)
         {
-            // Pick up all .sql files
+            // Collect all .sql files from AdditionalFiles
             var sqlFiles = context.AdditionalTextsProvider
-                .Where(file => file.Path.EndsWith(".sql", StringComparison.OrdinalIgnoreCase));
+                .Where(file => file.Path.EndsWith(".sql", StringComparison.OrdinalIgnoreCase))
+                .Collect();
 
-            // Combine all into a single generation step
-            var combined = sqlFiles.Collect();
-
-            context.RegisterSourceOutput(combined, GenerateSource);
+            context.RegisterSourceOutput(sqlFiles, GenerateSource);
         }
 
         private void GenerateSource(SourceProductionContext context, ImmutableArray<AdditionalText> sqlFiles)
@@ -42,8 +40,6 @@ namespace SourceGenerator
                 var pathParts = GetPathParts(file.Path);
 
                 FolderNode current = root;
-
-                // Build folder structure
                 for (int i = 0; i < pathParts.Count - 1; i++)
                 {
                     current = current.GetOrAddChild(pathParts[i]);
@@ -53,7 +49,6 @@ namespace SourceGenerator
                 current.Files[fileName] = text;
             }
 
-            // Generate class code recursively
             foreach (var folder in root.Children.Values)
             {
                 WriteFolderClass(sb, folder, 1);
@@ -71,7 +66,7 @@ namespace SourceGenerator
             if (index >= 0)
                 relative = relative.Substring(index + 5); // Skip "/Sql/"
 
-            return relative.Split('/', (char)StringSplitOptions.RemoveEmptyEntries).ToList();
+            return relative.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries).ToList();
         }
 
         private static void WriteFolderClass(StringBuilder sb, FolderNode folder, int indent)
@@ -104,7 +99,7 @@ namespace SourceGenerator
             foreach (var ch in invalid)
                 name = name.Replace(ch, '_');
 
-            if (char.IsDigit(name.FirstOrDefault()))
+            if (!string.IsNullOrEmpty(name) && char.IsDigit(name[0]))
                 name = "_" + name;
 
             return name;
